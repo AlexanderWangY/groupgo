@@ -3,22 +3,50 @@
 //   sqlc v1.28.0
 // source: users.sql
 
-package db
+package sqlc
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
 
+const createUser = `-- name: CreateUser :one
+INSERT INTO auth.users (email, password_hash, first_name, last_name, is_email_verified)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id
+`
+
+type CreateUserParams struct {
+	Email           string         `json:"email"`
+	PasswordHash    string         `json:"password_hash"`
+	FirstName       sql.NullString `json:"first_name"`
+	LastName        sql.NullString `json:"last_name"`
+	IsEmailVerified bool           `json:"is_email_verified"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, createUser,
+		arg.Email,
+		arg.PasswordHash,
+		arg.FirstName,
+		arg.LastName,
+		arg.IsEmailVerified,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getUser = `-- name: GetUser :one
-SELECT id, email, password_hash, first_name, last_name, is_email_verified, created_at, updated_at FROM users
+SELECT id, email, password_hash, first_name, last_name, is_email_verified, created_at, updated_at FROM auth.users
 WHERE id = $1
 `
 
-func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
+func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (AuthUser, error) {
 	row := q.db.QueryRowContext(ctx, getUser, id)
-	var i User
+	var i AuthUser
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -33,19 +61,19 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, password_hash, first_name, last_name, is_email_verified, created_at, updated_at FROM users
+SELECT id, email, password_hash, first_name, last_name, is_email_verified, created_at, updated_at FROM auth.users
 ORDER BY created_at
 `
 
-func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
+func (q *Queries) ListUsers(ctx context.Context) ([]AuthUser, error) {
 	rows, err := q.db.QueryContext(ctx, listUsers)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []User{}
+	items := []AuthUser{}
 	for rows.Next() {
-		var i User
+		var i AuthUser
 		if err := rows.Scan(
 			&i.ID,
 			&i.Email,

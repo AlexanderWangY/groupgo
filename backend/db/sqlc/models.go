@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.28.0
 
-package db
+package sqlc
 
 import (
 	"database/sql"
@@ -11,7 +11,31 @@ import (
 	"github.com/google/uuid"
 )
 
-type User struct {
+type AuthAccessToken struct {
+	ID        uuid.UUID     `json:"id"`
+	SessionID uuid.NullUUID `json:"session_id"`
+	Token     string        `json:"token"`
+	CreatedAt sql.NullTime  `json:"created_at"`
+	ExpiresAt time.Time     `json:"expires_at"`
+}
+
+type AuthRefreshToken struct {
+	ID        uuid.UUID     `json:"id"`
+	SessionID uuid.NullUUID `json:"session_id"`
+	Token     string        `json:"token"`
+	CreatedAt sql.NullTime  `json:"created_at"`
+	ExpiresAt time.Time     `json:"expires_at"`
+	IsRevoked sql.NullBool  `json:"is_revoked"`
+}
+
+type AuthSession struct {
+	ID        uuid.UUID     `json:"id"`
+	UserID    uuid.NullUUID `json:"user_id"`
+	CreatedAt sql.NullTime  `json:"created_at"`
+	UpdatedAt sql.NullTime  `json:"updated_at"`
+}
+
+type AuthUser struct {
 	ID              uuid.UUID      `json:"id"`
 	Email           string         `json:"email"`
 	PasswordHash    string         `json:"password_hash"`

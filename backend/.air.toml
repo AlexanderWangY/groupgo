@@ -32,7 +32,7 @@ root = "."
   watcher = "cyan"
 
 [log]
-  silent = true
+  silent = false
 
 [misc]
   clean_on_exit = false

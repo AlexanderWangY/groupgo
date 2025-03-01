@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.28.0
 
-package db
+package sqlc
 
 import (
 	"context"
@@ -11,8 +11,9 @@ import (
 )
 
 type Querier interface {
-	GetUser(ctx context.Context, id uuid.UUID) (User, error)
-	ListUsers(ctx context.Context) ([]User, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UUID, error)
+	GetUser(ctx context.Context, id uuid.UUID) (AuthUser, error)
+	ListUsers(ctx context.Context) ([]AuthUser, error)
 }
 
 var _ Querier = (*Queries)(nil)
