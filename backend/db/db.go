@@ -19,7 +19,7 @@ func ConnectDB() {
 	var err error
 	DB, err = pgx.Connect(context.Background(), db_url)
 	if err != nil {
-		log.Fatalf("Unable to create db pool")
+		log.Fatalf("Could not connect to database at %s", db_url)
 	}
 
 	log.Print("Successfully connected to database")
