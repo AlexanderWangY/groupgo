@@ -7,9 +7,9 @@ package sqlc
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -19,15 +19,15 @@ RETURNING id
 `
 
 type CreateUserParams struct {
-	Email           string         `json:"email"`
-	PasswordHash    string         `json:"password_hash"`
-	FirstName       sql.NullString `json:"first_name"`
-	LastName        sql.NullString `json:"last_name"`
-	IsEmailVerified bool           `json:"is_email_verified"`
+	Email           string      `json:"email"`
+	PasswordHash    string      `json:"password_hash"`
+	FirstName       pgtype.Text `json:"first_name"`
+	LastName        pgtype.Text `json:"last_name"`
+	IsEmailVerified bool        `json:"is_email_verified"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UUID, error) {
-	row := q.db.QueryRowContext(ctx, createUser,
+	row := q.db.QueryRow(ctx, createUser,
 		arg.Email,
 		arg.PasswordHash,
 		arg.FirstName,
@@ -45,7 +45,7 @@ WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (AuthUser, error) {
-	row := q.db.QueryRowContext(ctx, getUser, id)
+	row := q.db.QueryRow(ctx, getUser, id)
 	var i AuthUser
 	err := row.Scan(
 		&i.ID,
@@ -66,7 +66,7 @@ ORDER BY created_at
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]AuthUser, error) {
-	rows, err := q.db.QueryContext(ctx, listUsers)
+	rows, err := q.db.Query(ctx, listUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -87,9 +87,6 @@ func (q *Queries) ListUsers(ctx context.Context) ([]AuthUser, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

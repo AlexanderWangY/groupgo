@@ -1,13 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
+	"os"
 
+	"github.com/AlexanderWangY/swoppr-backend/api"
 	"github.com/AlexanderWangY/swoppr-backend/db"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 )
 
@@ -17,24 +15,13 @@ func main() {
 		log.Fatal("Something went wrong loading the .env")
 	}
 
-	db.ConnectDB()
-	defer db.CloseDB()
-
-	r := chi.NewRouter()
-
-	r.Use(middleware.Logger)
-
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Welcome!"))
-	})
-
-	r.Get("/hello", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("This is the hello endpoints!"))
-	})
-
-	if err := http.ListenAndServe(":3000", r); err != nil {
-		fmt.Println("Error starting server:", err)
-	} else {
-		fmt.Println("Listening on port 3000")
+	connection_url := os.Getenv("DATABASE_URL")
+	if connection_url == "" {
+		log.Fatal("Could not find DATABASE_URL in .env")
 	}
+
+	new_db := db.NewDatabase(connection_url)
+	defer new_db.Pool.Close()
+
+	api.StartServer(new_db)
 }
