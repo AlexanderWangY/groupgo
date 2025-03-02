@@ -2,12 +2,12 @@ package auth
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/AlexanderWangY/swoppr-backend/db"
 	"github.com/AlexanderWangY/swoppr-backend/db/sqlc"
 	"github.com/AlexanderWangY/swoppr-backend/internal/utils"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -26,6 +26,10 @@ func (s *UserService) CreateUser(user sqlc.CreateUserParams) error {
 	return err
 }
 
+func (s *UserService) GetUser(userId uuid.UUID) (sqlc.AuthUser, error) {
+	return s.db.Query.GetUserByID(context.Background(), userId)
+}
+
 func (s *UserService) RegisterUserAndJWT(user sqlc.CreateUserParams) (*AuthResponse, error) {
 	tx, err := s.db.Pool.Begin(context.Background())
 	if err != nil {
@@ -35,59 +39,25 @@ func (s *UserService) RegisterUserAndJWT(user sqlc.CreateUserParams) (*AuthRespo
 
 	qtx := s.db.Query.WithTx(tx)
 
-	user_id, err := qtx.CreateUser(context.Background(), user)
+	userId, err := qtx.CreateUser(context.Background(), user)
 	if err != nil {
-		log.Println("here 2")
-		return nil, err
-	}
-
-	access_token_exp_time := time.Now().Add(24 * time.Hour)
-	refresh_token_exp_time := time.Now().AddDate(0, 1, 0)
-
-	access_token, err := utils.GenerateJWT(user_id.String(), access_token_exp_time)
-	if err != nil {
-		log.Println("here 3")
-		return nil, err
-	}
-
-	refresh_token, err := utils.GenerateRefreshToken()
-	if err != nil {
-		log.Println("here 4")
 		return nil, err
 	}
 
 	session, err := qtx.CreateSession(context.Background(), pgtype.UUID{
-		Bytes: user_id,
+		Bytes: userId,
 		Valid: true,
 	})
 	if err != nil {
-		log.Println("here 5")
 		return nil, err
 	}
 
-	_, err = qtx.CreateAccessToken(context.Background(), sqlc.CreateAccessTokenParams{
-		Token:     access_token,
-		SessionID: pgtype.UUID{Bytes: session.ID, Valid: true},
-		ExpiresAt: pgtype.Timestamptz{
-			Time:  access_token_exp_time,
-			Valid: true,
-		},
-	})
+	accessToken, err := s.GenerateAndStoreAccessToken(qtx, userId, session.ID)
 	if err != nil {
-		log.Println("here 6")
 		return nil, err
 	}
-
-	_, err = qtx.CreateRefreshToken(context.Background(), sqlc.CreateRefreshTokenParams{
-		Token:     refresh_token,
-		SessionID: pgtype.UUID{Bytes: session.ID, Valid: true},
-		ExpiresAt: pgtype.Timestamptz{
-			Time:  refresh_token_exp_time,
-			Valid: true,
-		},
-	})
+	refreshToken, err := s.GenerateAndStoreRefreshToken(qtx, userId, session.ID)
 	if err != nil {
-		log.Println("here 7")
 		return nil, err
 	}
 
@@ -97,10 +67,58 @@ func (s *UserService) RegisterUserAndJWT(user sqlc.CreateUserParams) (*AuthRespo
 	}
 
 	res := AuthResponse{
-		AccessToken:  access_token,
-		RefreshToken: refresh_token,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}
 
 	return &res, nil
 
+}
+
+func (s *UserService) GenerateAndStoreAccessToken(qtx *sqlc.Queries, userId, sessionId uuid.UUID) (string, error) {
+	accessTokenExpTime := time.Now().Add(24 * time.Hour)
+	accessTokenId := uuid.New()
+
+	accessToken, err := utils.GenerateJWT(userId.String(), accessTokenId.String(), accessTokenExpTime)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = qtx.CreateAccessToken(context.Background(), sqlc.CreateAccessTokenParams{
+		ID:        accessTokenId,
+		Token:     accessToken,
+		SessionID: pgtype.UUID{Bytes: sessionId, Valid: true},
+		ExpiresAt: pgtype.Timestamptz{
+			Time:  accessTokenExpTime,
+			Valid: true,
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return accessToken, nil
+}
+
+func (s *UserService) GenerateAndStoreRefreshToken(qtx *sqlc.Queries, userId, sessionId uuid.UUID) (string, error) {
+	refreshTokenExpTime := time.Now().AddDate(0, 1, 0)
+
+	refreshToken, err := utils.GenerateRefreshToken()
+	if err != nil {
+		return "", err
+	}
+
+	_, err = qtx.CreateRefreshToken(context.Background(), sqlc.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		SessionID: pgtype.UUID{Bytes: sessionId, Valid: true},
+		ExpiresAt: pgtype.Timestamptz{
+			Time:  refreshTokenExpTime,
+			Valid: true,
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return refreshToken, nil
 }

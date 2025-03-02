@@ -1,6 +1,6 @@
 -- name: CreateAccessToken :one
-INSERT INTO auth.access_tokens (session_id, token, expires_at)
-VALUES ($1, $2, $3)
+INSERT INTO auth.access_tokens (id, session_id, token, expires_at)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetAccessTokenByToken :one

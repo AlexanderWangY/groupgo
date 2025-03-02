@@ -7,6 +7,7 @@ import (
 
 	"github.com/AlexanderWangY/swoppr-backend/db/sqlc"
 	"github.com/AlexanderWangY/swoppr-backend/internal/utils"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -46,14 +47,45 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		IsEmailVerified: false,
 	})
 	if err != nil {
+		// Check for postgres errors
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+			h.HandleError(w, "That account already exists.", http.StatusConflict)
+			return
+		}
+
 		log.Println(err)
 		h.HandleError(w, "Something went wrong creating user.", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(tokens)
+	err = json.NewEncoder(w).Encode(tokens)
+	if err != nil {
+		h.HandleError(w, "Something went wrong sending response.", http.StatusInternalServerError)
+	}
+}
 
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract the body JSON
+	var register_req RegisterRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&register_req)
+	if err != nil {
+		h.HandleError(w, "Wrong request format, check your json.", http.StatusBadRequest)
+		return
+	}
+}
+
+func (h *Handler) GetOwnUser(w http.ResponseWriter, r *http.Request) {
+	_, err := w.Write([]byte("This is a protected route you are accessing! This means you have a JWT!"))
+	if err != nil {
+		h.HandleError(w, "Something went wrong responding.", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) HandleError(w http.ResponseWriter, message string, status int) {
@@ -61,5 +93,8 @@ func (h *Handler) HandleError(w http.ResponseWriter, message string, status int)
 		Error: message,
 	}
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(errResponse)
+	err := json.NewEncoder(w).Encode(errResponse)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }

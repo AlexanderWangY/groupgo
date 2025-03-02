@@ -5,22 +5,22 @@ import (
 	"encoding/base64"
 	"errors"
 	"log"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
-var JWTSecret = []byte("1j23lkjlji1j2kkj3k2j3k3k")
+var JWTSecret = []byte(os.Getenv("JWT_SECRET"))
 
-func GenerateJWT(userId string, exp_time time.Time) (string, error) {
+func GenerateJWT(userId, tokenId string, exp_time time.Time) (string, error) {
 	claims := jwt.RegisteredClaims{
 		ExpiresAt: jwt.NewNumericDate(exp_time),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 		NotBefore: jwt.NewNumericDate(time.Now()),
 		Issuer:    "swoppr-backend",
 		Subject:   userId,
-		ID:        uuid.NewString(),
+		ID:        tokenId,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -32,7 +32,6 @@ func GenerateJWT(userId string, exp_time time.Time) (string, error) {
 
 	tokenString, err := token.SignedString(JWTSecret)
 	if err != nil {
-		log.Println("here 1")
 		return "", err
 	}
 

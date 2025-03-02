@@ -13,19 +13,25 @@ import (
 )
 
 const createAccessToken = `-- name: CreateAccessToken :one
-INSERT INTO auth.access_tokens (session_id, token, expires_at)
-VALUES ($1, $2, $3)
+INSERT INTO auth.access_tokens (id, session_id, token, expires_at)
+VALUES ($1, $2, $3, $4)
 RETURNING id, session_id, token, created_at, expires_at
 `
 
 type CreateAccessTokenParams struct {
+	ID        uuid.UUID          `json:"id"`
 	SessionID pgtype.UUID        `json:"session_id"`
 	Token     string             `json:"token"`
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 }
 
 func (q *Queries) CreateAccessToken(ctx context.Context, arg CreateAccessTokenParams) (AuthAccessToken, error) {
-	row := q.db.QueryRow(ctx, createAccessToken, arg.SessionID, arg.Token, arg.ExpiresAt)
+	row := q.db.QueryRow(ctx, createAccessToken,
+		arg.ID,
+		arg.SessionID,
+		arg.Token,
+		arg.ExpiresAt,
+	)
 	var i AuthAccessToken
 	err := row.Scan(
 		&i.ID,
