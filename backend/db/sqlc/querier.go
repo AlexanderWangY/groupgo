@@ -8,12 +8,26 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
+	CreateAccessToken(ctx context.Context, arg CreateAccessTokenParams) (AuthAccessToken, error)
+	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (AuthRefreshToken, error)
+	CreateSession(ctx context.Context, userID pgtype.UUID) (AuthSession, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UUID, error)
-	GetUser(ctx context.Context, id uuid.UUID) (AuthUser, error)
+	DeleteAccessToken(ctx context.Context, id uuid.UUID) error
+	DeleteAccessTokenBySessionID(ctx context.Context, sessionID pgtype.UUID) error
+	DeleteRefreshTokenByID(ctx context.Context, id uuid.UUID) error
+	DeleteRefreshTokenByToken(ctx context.Context, token string) error
+	GetAccessTokenByToken(ctx context.Context, token string) (AuthAccessToken, error)
+	GetRefreshTokenByToken(ctx context.Context, token string) (AuthRefreshToken, error)
+	GetUserByEmail(ctx context.Context, email string) (AuthUser, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (AuthUser, error)
 	ListUsers(ctx context.Context) ([]AuthUser, error)
+	RevokeAllRefreshTokensForSession(ctx context.Context, sessionID pgtype.UUID) error
+	RevokeRefreshToken(ctx context.Context, id uuid.UUID) (AuthRefreshToken, error)
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (AuthUser, error)
 }
 
 var _ Querier = (*Queries)(nil)

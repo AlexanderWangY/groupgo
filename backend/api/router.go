@@ -24,8 +24,8 @@ func SetupRouter(database *db.Database) *chi.Mux {
 
 	r.Route("/api/v1", func(r chi.Router) {
 
-		r.Group(func(r chi.Router) {
-			r.Get("/user/{userId}", authHandler.GetUser)
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/register", authHandler.Register)
 		})
 	})
 

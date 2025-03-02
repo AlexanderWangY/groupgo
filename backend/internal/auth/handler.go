@@ -2,12 +2,12 @@ package auth
 
 import (
 	"encoding/json"
-	"errors"
+	"log"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
+	"github.com/AlexanderWangY/swoppr-backend/db/sqlc"
+	"github.com/AlexanderWangY/swoppr-backend/internal/utils"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Handler struct {
@@ -20,28 +20,40 @@ func NewHandler(service *UserService) *Handler {
 	}
 }
 
-func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
-	user_id := chi.URLParam(r, "userId")
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	// Parse the UUID from the string
-	user_uuid, err := uuid.Parse(user_id)
+
+	// Extract the body JSON
+	var register_req RegisterRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&register_req)
 	if err != nil {
-		h.HandleError(w, "Not a valid UUID", http.StatusBadRequest)
+		h.HandleError(w, "Wrong request format, check your json.", http.StatusBadRequest)
 		return
 	}
 
-	user, err := h.service.GetUser(user_uuid)
+	hashed, err := utils.HashPassword(register_req.Password)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			h.HandleError(w, "No rows found!", http.StatusNotFound)
-		} else {
-			h.HandleError(w, "Internal server error.", http.StatusInternalServerError)
-		}
+		h.HandleError(w, "Something went wrong.", http.StatusInternalServerError)
+		return
+	}
+
+	tokens, err := h.service.RegisterUserAndJWT(sqlc.CreateUserParams{
+		Email:           register_req.Email,
+		PasswordHash:    hashed,
+		FirstName:       pgtype.Text{Valid: false},
+		LastName:        pgtype.Text{Valid: false},
+		IsEmailVerified: false,
+	})
+	if err != nil {
+		log.Println(err)
+		h.HandleError(w, "Something went wrong creating user.", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(tokens)
+
 }
 
 func (h *Handler) HandleError(w http.ResponseWriter, message string, status int) {
