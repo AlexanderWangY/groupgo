@@ -23,6 +23,7 @@ func NewUserService(database *db.Database) *UserService {
 
 func (s *UserService) CreateUser(user sqlc.CreateUserParams) error {
 	_, err := s.db.Query.CreateUser(context.Background(), user)
+
 	return err
 }
 

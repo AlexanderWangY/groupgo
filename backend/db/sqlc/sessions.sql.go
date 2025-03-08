@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -25,6 +26,32 @@ func (q *Queries) CreateSession(ctx context.Context, userID pgtype.UUID) (AuthSe
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getSessionUserByID = `-- name: GetSessionUserByID :one
+SELECT
+    u.id, u.email, u.password_hash, u.first_name, u.last_name, u.is_email_verified, u.created_at, u.updated_at
+FROM
+    auth.sessions s
+INNER JOIN auth.users u ON s.user_id = u.id
+WHERE
+    s.id = $1
+`
+
+func (q *Queries) GetSessionUserByID(ctx context.Context, id uuid.UUID) (AuthUser, error) {
+	row := q.db.QueryRow(ctx, getSessionUserByID, id)
+	var i AuthUser
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.IsEmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

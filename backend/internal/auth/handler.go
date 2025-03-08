@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/AlexanderWangY/swoppr-backend/db/sqlc"
 	"github.com/AlexanderWangY/swoppr-backend/internal/utils"
@@ -58,11 +59,26 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    tokens.AccessToken,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		Path:     "/",
+		Expires:  time.Now().Add(25 * time.Hour),
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    tokens.RefreshToken,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		Path:     "/",
+		Expires:  time.Now().AddDate(0, 1, 0),
+	})
 	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(tokens)
-	if err != nil {
-		h.HandleError(w, "Something went wrong sending response.", http.StatusInternalServerError)
-	}
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {

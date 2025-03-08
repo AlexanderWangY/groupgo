@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -48,24 +47,24 @@ func GenerateRefreshToken() (string, error) {
 	return token, nil
 }
 
-func validToken(token string) *error {
-	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-		}
+// func validToken(token string) *error {
+// 	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+// 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+// 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+// 		}
 
-		return JWTSecret, nil
-	})
+// 		return JWTSecret, nil
+// 	})
 
-	if err != nil {
-		return &err
-	}
+// 	if err != nil {
+// 		return &err
+// 	}
 
-	if claims, ok := parsedToken.Claims.(jwt.MapClaims); !ok {
-		return nil
-	}
+// 	if claims, ok := parsedToken.Claims.(jwt.MapClaims); !ok {
+// 		return nil
+// 	}
 
-}
+// }
 
 // Helper function to generate random string for refresh token
 func GenerateRandomString(length int) (string, error) {
