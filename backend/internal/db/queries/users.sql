@@ -15,7 +15,7 @@ ORDER BY created_at;
 -- name: CreateUser :one
 INSERT INTO auth.users (email, password_hash, first_name, last_name, is_email_verified)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id;
+RETURNING *;
 
 -- name: UpdateUser :one
 UPDATE auth.users

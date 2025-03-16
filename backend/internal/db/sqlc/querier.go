@@ -15,7 +15,7 @@ type Querier interface {
 	CreateAccessToken(ctx context.Context, arg CreateAccessTokenParams) (AuthAccessToken, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (AuthRefreshToken, error)
 	CreateSession(ctx context.Context, userID pgtype.UUID) (AuthSession, error)
-	CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UUID, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (AuthUser, error)
 	DeleteAccessToken(ctx context.Context, id uuid.UUID) error
 	DeleteAccessTokenBySessionID(ctx context.Context, sessionID pgtype.UUID) error
 	DeleteRefreshTokenByID(ctx context.Context, id uuid.UUID) error

@@ -1,15 +1,20 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
+	"os/signal"
 
-	"github.com/AlexanderWangY/swoppr-backend/api"
-	"github.com/AlexanderWangY/swoppr-backend/db"
+	"github.com/AlexanderWangY/swoppr-backend/internal/api"
+	"github.com/AlexanderWangY/swoppr-backend/internal/db"
 	"github.com/joho/godotenv"
 )
 
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer cancel()
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Something went wrong loading the .env")
@@ -23,5 +28,5 @@ func main() {
 	new_db := db.NewDatabase(connection_url)
 	defer new_db.Pool.Close()
 
-	api.StartServer(new_db)
+	api.StartServer(ctx, new_db)
 }

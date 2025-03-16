@@ -1,11 +1,11 @@
 package api
 
 import (
+	"context"
 	"log"
 	"net/http"
 
-	"github.com/AlexanderWangY/swoppr-backend/db"
-	"github.com/AlexanderWangY/swoppr-backend/internal/auth"
+	"github.com/AlexanderWangY/swoppr-backend/internal/db"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -19,22 +19,16 @@ func SetupRouter(database *db.Database) *chi.Mux {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 
-	authService := auth.NewUserService(database)
-	authHandler := auth.NewHandler(authService)
-
 	r.Route("/api/v1", func(r chi.Router) {
 
 		r.Route("/auth", func(r chi.Router) {
 
 			// Public /auth routes
 			r.Group(func(r chi.Router) {
-				r.Post("/register", authHandler.Register)
 			})
 
 			// Private /auth routes
 			r.Group(func(r chi.Router) {
-				r.Use(authMiddleware)
-				r.Get("/me", authHandler.GetOwnUser)
 			})
 		})
 	})
@@ -42,7 +36,7 @@ func SetupRouter(database *db.Database) *chi.Mux {
 	return r
 }
 
-func StartServer(database *db.Database) {
+func StartServer(ctx context.Context, database *db.Database) {
 	r := SetupRouter(database)
 
 	log.Println("Starting server on port 8080")

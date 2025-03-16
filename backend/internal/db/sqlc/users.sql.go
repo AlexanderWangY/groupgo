@@ -15,7 +15,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO auth.users (email, password_hash, first_name, last_name, is_email_verified)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id
+RETURNING id, email, password_hash, first_name, last_name, is_email_verified, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -26,7 +26,7 @@ type CreateUserParams struct {
 	IsEmailVerified bool        `json:"is_email_verified"`
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UUID, error) {
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (AuthUser, error) {
 	row := q.db.QueryRow(ctx, createUser,
 		arg.Email,
 		arg.PasswordHash,
@@ -34,9 +34,18 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UU
 		arg.LastName,
 		arg.IsEmailVerified,
 	)
-	var id uuid.UUID
-	err := row.Scan(&id)
-	return id, err
+	var i AuthUser
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.IsEmailVerified,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
