@@ -14,46 +14,126 @@ import (
 
 const createSession = `-- name: CreateSession :one
 INSERT INTO auth.sessions (
-    user_id
+    user_id,
+    token,
+    expires_at
 ) VALUES (
-    $1
-) RETURNING id, user_id, created_at, updated_at
+    $1, $2, $3
+) RETURNING id, user_id, token, expires_at, created_at
 `
 
-func (q *Queries) CreateSession(ctx context.Context, userID pgtype.UUID) (AuthSession, error) {
-	row := q.db.QueryRow(ctx, createSession, userID)
+type CreateSessionParams struct {
+	UserID    uuid.UUID          `json:"user_id"`
+	Token     string             `json:"token"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+}
+
+func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (AuthSession, error) {
+	row := q.db.QueryRow(ctx, createSession, arg.UserID, arg.Token, arg.ExpiresAt)
 	var i AuthSession
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const getSessionUserByID = `-- name: GetSessionUserByID :one
-SELECT
-    u.id, u.email, u.password_hash, u.first_name, u.last_name, u.is_email_verified, u.created_at, u.updated_at
-FROM
-    auth.sessions s
-INNER JOIN auth.users u ON s.user_id = u.id
-WHERE
-    s.id = $1
+const deleteAllUserSessionsById = `-- name: DeleteAllUserSessionsById :exec
+DELETE FROM auth.sessions
+WHERE user_id = $1
 `
 
-func (q *Queries) GetSessionUserByID(ctx context.Context, id uuid.UUID) (AuthUser, error) {
-	row := q.db.QueryRow(ctx, getSessionUserByID, id)
-	var i AuthUser
+func (q *Queries) DeleteAllUserSessionsById(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAllUserSessionsById, userID)
+	return err
+}
+
+const deleteSessionByID = `-- name: DeleteSessionByID :exec
+DELETE FROM auth.sessions
+WHERE id = $1
+`
+
+func (q *Queries) DeleteSessionByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteSessionByID, id)
+	return err
+}
+
+const getAllUserSessionToken = `-- name: GetAllUserSessionToken :many
+SELECT token FROM auth.sessions
+WHERE user_id = $1 AND expires_at > NOW()
+`
+
+func (q *Queries) GetAllUserSessionToken(ctx context.Context, userID uuid.UUID) ([]string, error) {
+	rows, err := q.db.Query(ctx, getAllUserSessionToken, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var token string
+		if err := rows.Scan(&token); err != nil {
+			return nil, err
+		}
+		items = append(items, token)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSessionByToken = `-- name: GetSessionByToken :one
+SELECT id, user_id, token, expires_at, created_at FROM auth.sessions
+WHERE token = $1 AND expires_at > NOW()
+LIMIT 1
+`
+
+func (q *Queries) GetSessionByToken(ctx context.Context, token string) (AuthSession, error) {
+	row := q.db.QueryRow(ctx, getSessionByToken, token)
+	var i AuthSession
 	err := row.Scan(
 		&i.ID,
-		&i.Email,
-		&i.PasswordHash,
-		&i.FirstName,
-		&i.LastName,
-		&i.IsEmailVerified,
+		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
 		&i.CreatedAt,
-		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getSessionWithUserInformation = `-- name: GetSessionWithUserInformation :one
+SELECT
+    auth.sessions.token,
+    auth.sessions.id,
+    auth.sessions.expires_at,
+    auth.users.id AS user_id,
+    auth.users.payment_plan
+FROM auth.sessions
+JOIN auth.users ON auth.sessions.user_id = auth.users.id
+WHERE auth.sessions.id = $1
+`
+
+type GetSessionWithUserInformationRow struct {
+	Token       string             `json:"token"`
+	ID          uuid.UUID          `json:"id"`
+	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	UserID      uuid.UUID          `json:"user_id"`
+	PaymentPlan AuthPaymentPlan    `json:"payment_plan"`
+}
+
+func (q *Queries) GetSessionWithUserInformation(ctx context.Context, id uuid.UUID) (GetSessionWithUserInformationRow, error) {
+	row := q.db.QueryRow(ctx, getSessionWithUserInformation, id)
+	var i GetSessionWithUserInformationRow
+	err := row.Scan(
+		&i.Token,
+		&i.ID,
+		&i.ExpiresAt,
+		&i.UserID,
+		&i.PaymentPlan,
 	)
 	return i, err
 }

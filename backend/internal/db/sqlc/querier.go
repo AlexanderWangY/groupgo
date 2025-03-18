@@ -8,27 +8,24 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
-	CreateAccessToken(ctx context.Context, arg CreateAccessTokenParams) (AuthAccessToken, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (AuthRefreshToken, error)
-	CreateSession(ctx context.Context, userID pgtype.UUID) (AuthSession, error)
+	CreateSession(ctx context.Context, arg CreateSessionParams) (AuthSession, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (AuthUser, error)
-	DeleteAccessToken(ctx context.Context, id uuid.UUID) error
-	DeleteAccessTokenBySessionID(ctx context.Context, sessionID pgtype.UUID) error
-	DeleteRefreshTokenByID(ctx context.Context, id uuid.UUID) error
-	DeleteRefreshTokenByToken(ctx context.Context, token string) error
-	GetAccessTokenByToken(ctx context.Context, token string) (AuthAccessToken, error)
+	DeleteAllUserSessionsById(ctx context.Context, userID uuid.UUID) error
+	DeleteSessionByID(ctx context.Context, id uuid.UUID) error
+	GetAllUserSessionToken(ctx context.Context, userID uuid.UUID) ([]string, error)
+	GetRefreshTokenByID(ctx context.Context, id uuid.UUID) (AuthRefreshToken, error)
 	GetRefreshTokenByToken(ctx context.Context, token string) (AuthRefreshToken, error)
-	GetSessionUserByID(ctx context.Context, id uuid.UUID) (AuthUser, error)
+	GetSessionByToken(ctx context.Context, token string) (AuthSession, error)
+	GetSessionWithUserInformation(ctx context.Context, id uuid.UUID) (GetSessionWithUserInformationRow, error)
 	GetUserByEmail(ctx context.Context, email string) (AuthUser, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (AuthUser, error)
 	ListUsers(ctx context.Context) ([]AuthUser, error)
-	RevokeAllRefreshTokensForSession(ctx context.Context, sessionID pgtype.UUID) error
-	RevokeRefreshToken(ctx context.Context, id uuid.UUID) (AuthRefreshToken, error)
-	UpdateUser(ctx context.Context, arg UpdateUserParams) (AuthUser, error)
+	MarkUsedRefreshTokenByID(ctx context.Context, id uuid.UUID) error
+	MarkUsedRefreshTokenByToken(ctx context.Context, token string) error
 }
 
 var _ Querier = (*Queries)(nil)

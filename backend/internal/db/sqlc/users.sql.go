@@ -9,39 +9,28 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO auth.users (email, password_hash, first_name, last_name, is_email_verified)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, email, password_hash, first_name, last_name, is_email_verified, created_at, updated_at
+INSERT INTO auth.users (email, password_hash)
+VALUES ($1, $2)
+RETURNING id, email, password_hash, name, payment_plan, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	Email           string      `json:"email"`
-	PasswordHash    string      `json:"password_hash"`
-	FirstName       pgtype.Text `json:"first_name"`
-	LastName        pgtype.Text `json:"last_name"`
-	IsEmailVerified bool        `json:"is_email_verified"`
+	Email        string `json:"email"`
+	PasswordHash string `json:"password_hash"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (AuthUser, error) {
-	row := q.db.QueryRow(ctx, createUser,
-		arg.Email,
-		arg.PasswordHash,
-		arg.FirstName,
-		arg.LastName,
-		arg.IsEmailVerified,
-	)
+	row := q.db.QueryRow(ctx, createUser, arg.Email, arg.PasswordHash)
 	var i AuthUser
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
-		&i.FirstName,
-		&i.LastName,
-		&i.IsEmailVerified,
+		&i.Name,
+		&i.PaymentPlan,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -49,7 +38,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (AuthUse
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, first_name, last_name, is_email_verified, created_at, updated_at FROM auth.users
+SELECT id, email, password_hash, name, payment_plan, created_at, updated_at FROM auth.users
 WHERE email = $1
 LIMIT 1
 `
@@ -61,9 +50,8 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (AuthUser, e
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
-		&i.FirstName,
-		&i.LastName,
-		&i.IsEmailVerified,
+		&i.Name,
+		&i.PaymentPlan,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -71,7 +59,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (AuthUser, e
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, password_hash, first_name, last_name, is_email_verified, created_at, updated_at FROM auth.users
+SELECT id, email, password_hash, name, payment_plan, created_at, updated_at FROM auth.users
 WHERE id = $1
 LIMIT 1
 `
@@ -83,9 +71,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (AuthUser, erro
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
-		&i.FirstName,
-		&i.LastName,
-		&i.IsEmailVerified,
+		&i.Name,
+		&i.PaymentPlan,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -93,7 +80,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (AuthUser, erro
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, password_hash, first_name, last_name, is_email_verified, created_at, updated_at FROM auth.users
+SELECT id, email, password_hash, name, payment_plan, created_at, updated_at FROM auth.users
 ORDER BY created_at
 `
 
@@ -110,9 +97,8 @@ func (q *Queries) ListUsers(ctx context.Context) ([]AuthUser, error) {
 			&i.ID,
 			&i.Email,
 			&i.PasswordHash,
-			&i.FirstName,
-			&i.LastName,
-			&i.IsEmailVerified,
+			&i.Name,
+			&i.PaymentPlan,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -124,48 +110,4 @@ func (q *Queries) ListUsers(ctx context.Context) ([]AuthUser, error) {
 		return nil, err
 	}
 	return items, nil
-}
-
-const updateUser = `-- name: UpdateUser :one
-UPDATE auth.users
-SET
-    email = COALESCE($1, email),
-    password_hash = COALESCE($2, password_hash),
-    first_name = COALESCE($3, first_name),
-    last_name = COALESCE($4, last_name),
-    is_email_verified = COALESCE($5, is_email_verified)
-WHERE id = $6
-RETURNING id, email, password_hash, first_name, last_name, is_email_verified, created_at, updated_at
-`
-
-type UpdateUserParams struct {
-	Email           pgtype.Text `json:"email"`
-	PasswordHash    pgtype.Text `json:"password_hash"`
-	FirstName       pgtype.Text `json:"first_name"`
-	LastName        pgtype.Text `json:"last_name"`
-	IsEmailVerified pgtype.Bool `json:"is_email_verified"`
-	ID              uuid.UUID   `json:"id"`
-}
-
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (AuthUser, error) {
-	row := q.db.QueryRow(ctx, updateUser,
-		arg.Email,
-		arg.PasswordHash,
-		arg.FirstName,
-		arg.LastName,
-		arg.IsEmailVerified,
-		arg.ID,
-	)
-	var i AuthUser
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.PasswordHash,
-		&i.FirstName,
-		&i.LastName,
-		&i.IsEmailVerified,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
 }

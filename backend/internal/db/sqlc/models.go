@@ -5,41 +5,80 @@
 package sqlc
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type AuthAccessToken struct {
-	ID        uuid.UUID          `json:"id"`
-	SessionID pgtype.UUID        `json:"session_id"`
-	Token     string             `json:"token"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+type AuthPaymentPlan string
+
+const (
+	AuthPaymentPlanFree    AuthPaymentPlan = "free"
+	AuthPaymentPlanBasic   AuthPaymentPlan = "basic"
+	AuthPaymentPlanPremium AuthPaymentPlan = "premium"
+)
+
+func (e *AuthPaymentPlan) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AuthPaymentPlan(s)
+	case string:
+		*e = AuthPaymentPlan(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AuthPaymentPlan: %T", src)
+	}
+	return nil
+}
+
+type NullAuthPaymentPlan struct {
+	AuthPaymentPlan AuthPaymentPlan `json:"auth_payment_plan"`
+	Valid           bool            `json:"valid"` // Valid is true if AuthPaymentPlan is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAuthPaymentPlan) Scan(value interface{}) error {
+	if value == nil {
+		ns.AuthPaymentPlan, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AuthPaymentPlan.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAuthPaymentPlan) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AuthPaymentPlan), nil
 }
 
 type AuthRefreshToken struct {
 	ID        uuid.UUID          `json:"id"`
-	SessionID pgtype.UUID        `json:"session_id"`
+	UserID    uuid.UUID          `json:"user_id"`
+	SessionID uuid.UUID          `json:"session_id"`
 	Token     string             `json:"token"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Used      bool               `json:"used"`
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
-	IsRevoked pgtype.Bool        `json:"is_revoked"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type AuthSession struct {
 	ID        uuid.UUID          `json:"id"`
-	UserID    pgtype.UUID        `json:"user_id"`
+	UserID    uuid.UUID          `json:"user_id"`
+	Token     string             `json:"token"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type AuthUser struct {
-	ID              uuid.UUID          `json:"id"`
-	Email           string             `json:"email"`
-	PasswordHash    string             `json:"password_hash"`
-	FirstName       pgtype.Text        `json:"first_name"`
-	LastName        pgtype.Text        `json:"last_name"`
-	IsEmailVerified bool               `json:"is_email_verified"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID           uuid.UUID          `json:"id"`
+	Email        string             `json:"email"`
+	PasswordHash string             `json:"password_hash"`
+	Name         pgtype.Text        `json:"name"`
+	PaymentPlan  AuthPaymentPlan    `json:"payment_plan"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }

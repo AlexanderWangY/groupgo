@@ -1,32 +1,30 @@
 -- name: CreateRefreshToken :one
 INSERT INTO auth.refresh_tokens (
+    user_id,
     session_id,
     token,
     expires_at
 ) VALUES (
-    $1, $2, $3
+    $1, $2, $3, $4
 ) RETURNING *;
+
+-- name: GetRefreshTokenByID :one
+SELECT * FROM auth.refresh_tokens
+WHERE id = $1 AND expires_at > NOW()
+LIMIT 1;
+
 
 -- name: GetRefreshTokenByToken :one
 SELECT * FROM auth.refresh_tokens
-WHERE token = $1
+WHERE token = $1 AND expires_at > NOW()
 LIMIT 1;
 
--- name: RevokeRefreshToken :one
+-- name: MarkUsedRefreshTokenByID :exec
 UPDATE auth.refresh_tokens
-SET is_revoked = true
-WHERE id = $1
-RETURNING *;
+SET used = TRUE
+WHERE id = $1 AND expires_at > NOW();
 
--- name: RevokeAllRefreshTokensForSession :exec
+-- name: MarkUsedRefreshTokenByToken :exec
 UPDATE auth.refresh_tokens
-SET is_revoked = true
-WHERE session_id = $1;
-
--- name: DeleteRefreshTokenByID :exec
-DELETE FROM auth.refresh_tokens
-WHERE id = $1;
-
--- name: DeleteRefreshTokenByToken :exec
-DELETE FROM auth.refresh_tokens
-WHERE token = $1;
+SET used = TRUE
+WHERE token = $1 AND expires_at > NOW();

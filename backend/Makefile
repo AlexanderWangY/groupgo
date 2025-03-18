@@ -15,7 +15,7 @@ setup:
 		make start-local-db; \
 	else \
 		echo "Container dev-postgres does not exist. Creating it now!"; \
-		docker run --name dev-postgres -e POSTGRES_PASSWORD=postgres -d -p 5432:5432 postgres:15; \
+		docker run --name dev-postgres -e POSTGRES_PASSWORD=postgres -d -p 5432:5432 postgres:17.4; \
 	fi
 	@sleep 2
 	@echo "Applying migrations..."
@@ -35,7 +35,7 @@ generate:
 	@sqlc generate
 
 migrate-up:
-	@goose -dir db/migrations postgres "$(DATABASE_URL)" up
+	@goose -dir ./internal/db/migrations postgres "$(DATABASE_URL)" up
 
 start-local-db:
 	@docker start dev-postgres
