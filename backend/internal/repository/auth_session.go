@@ -1,6 +1,6 @@
 package repository
 
-import "github.com/AlexanderWangY/swoppr-backend/internal/db/sqlc"
+import "github.com/AlexanderWangY/groupgo-backend/internal/db/sqlc"
 
 type SessionRepository struct {
 	db *sqlc.Queries

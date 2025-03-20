@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/AlexanderWangY/swoppr-backend/internal/db"
+	"github.com/AlexanderWangY/groupgo-backend/internal/db"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )

@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/AlexanderWangY/swoppr-backend/internal/api"
-	"github.com/AlexanderWangY/swoppr-backend/internal/db"
+	"github.com/AlexanderWangY/groupgo-backend/internal/api"
+	"github.com/AlexanderWangY/groupgo-backend/internal/db"
 	"github.com/joho/godotenv"
 )
 
