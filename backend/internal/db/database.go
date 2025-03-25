@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/AlexanderWangY/swoppr-backend/internal/db/sqlc"
+	"github.com/AlexanderWangY/groupgo-backend/internal/db/sqlc"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
